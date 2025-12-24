@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<!-- Script de visualisation des réseaux d'irrigation ASA avec Mapbox GL JS -->
+
+<head>
+<meta charset="utf-8" />
+<title>Réseaux d'irrigation ASA Plaine de Gaubert</title>
+
+<!-- Bibliothèques Mapbox GL JS et Geocoder -->
+<script src="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v2.4.1/mapbox-gl.css" rel="stylesheet" />
+
+<script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+<link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css"/>
+
+<style>
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* ================= HEADER / TITRE ================= */
+
+/* En-tête fixe contenant le logo et le titre */
+header {
+  position: relative;
+  height: 80px;
+  background: #ffffff;
+  border-bottom: 2px solid #ddd;
+  z-index: 20;
+}
+
+/* Logo AMU positionné à gauche dans le header */
+header img {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 50px;
+  width: auto;
+}
+
+/* Titre centré dans le header */
+h1 {
+  text-align: center;
+  color: black;
+  margin: 0;
+  line-height: 80px;
+  font-size: 24px;
+}
+
+/* ================= CARTE ================= */
+
+/* Conteneur principal de la carte Mapbox */
+#map {
+  position: absolute;
+  top: 90px;
+  bottom: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+/* ================= LÉGENDE ================= */
+
+/* Panneau de contrôle des couches (légende interactive) */
+.map-overlay-2 {
+  position: absolute;
+  top: 120px;
+  right: 10px;
+  z-index: 10;
+  background: rgba(50, 50, 50, 0.75);
+  color: #ffffff;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.map-overlay-2 fieldset {
+  border: 1px solid rgba(255,255,255,0.3);
+  margin-bottom: 8px;
+  padding: 6px;
+}
+
+.map-overlay-2 label,
+.map-overlay-2 legend {
+  font-weight: bold;
+  color: #ffffff;
+}
+
+/* ================= COORDONNÉES ================= */
+
+/* Boîte d'affichage des coordonnées du curseur */
+.coords-box {
+  position: absolute;
+  bottom: 10px;
+  left: 100px;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ================= CRÉDITS EN BAS DE CARTE ================= */
+
+/* Encadré des informations d'auteur */
+.map-credits {
+  position: absolute;
+  bottom: 10px;
+  left: 400px;
+  background: rgba(50, 50, 50, 0.75);
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  z-index: 10;
+}
+
+.map-credits .credits-title {
+  font-weight: bold;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.map-credits .credits-names {
+  font-size: 12px;
+}
+
+.map-credits .credits-mail a {
+  font-size: 11px;
+  color: #aad4ff;
+  text-decoration: none;
+}
+
+.map-credits .credits-mail a:hover {
+  text-decoration: underline;
+}
+
+</style>
+</head>
+
+<body>
+<header class="page-header">
+  <img src="logo_AMU.png" alt="Logo AMU" class="logo">
+  <h1>Réseaux d'irrigation ASA Plaine de Gaubert, Grande Iscle, Nigas</h1>
+</header>
+<div id="map"></div>
+
+<!-- Panneau de légende avec checkboxes pour contrôler l'affichage des couches -->
+<div class="map-overlay-2 top">
+  <div class="map-overlay-inner">
+
+    <fieldset>
+      <label class="categoryLabel">LP SIG HACKATON 2025</label>
+      <div><input type="checkbox" id="bleoneCB" onchange="switchlayer('bleone')"> Réseaux d'irrigation</div>
+      <div><input type="checkbox" id="itineraireCB" onchange="switchlayer('itineraire')"> Itinéraires PDIPR</div>
+      <div><input type="checkbox" id="perimetreCB" onchange="switchlayer('perimetre')"> Périmètre ASA</div>
+      <div><input type="checkbox" id="sentierCB" onchange="switchlayer('sentier')"> Sentier</div>
+    </fieldset>
+
+    <fieldset>
+      <label class="categoryLabel">Équipements</label>
+      <div><input type="checkbox" id="siphCB" onchange="switchlayer('siph')"> Siphon</div>
+      <div><input type="checkbox" id="reglCB" onchange="switchlayer('regl')"> Règle</div>
+      <div><input type="checkbox" id="partCB" onchange="switchlayer('part')"> Partiteur</div>
+      <div><input type="checkbox" id="pompCB" onchange="switchlayer('pomp')"> Pompe</div>
+      <div><input type="checkbox" id="martCB" onchange="switchlayer('mart')"> Martelière</div>
+      <div><input type="checkbox" id="degCB" onchange="switchlayer('deg')"> Dégrilleur</div>
+      <div><input type="checkbox" id="aqCB" onchange="switchlayer('aq')"> Aqueduc</div>
+    </fieldset>
+
+    <fieldset>
+      <label class="categoryLabel">Topographie</label>
+      <div><input type="checkbox" id="RPGCB" onchange="switchlayer('RPG')"> Occupation du sol</div>
+      <div><input type="checkbox" id="hydrologieCB" onchange="switchlayer('hydrologie')"> Hydrologie</div>
+      <div><input type="checkbox" id="Batiments_3DCB" onchange="switchlayer('Batiments_3D')"> Bâtiments 3D</div>
+    </fieldset>
+
+    <fieldset>
+      <legend class="legend">Fond de carte</legend>
+      <div id="basemap-control" class="basemap-control legend">
+        <select id="basemap-select">
+          <option value="mapbox://styles/mapbox/streets-v11" selected>Streets</option>
+          <option value="mapbox://styles/mapbox/outdoors-v11">Outdoors</option>
+          <option value="mapbox://styles/mapbox/dark-v10">Dark</option>
+          <option value="mapbox://styles/mapbox/satellite-v9">Satellite</option>
+        </select>
+      </div>
+    </fieldset>
+
+  </div>
+</div>
+
+<!-- Encadré des crédits et contact -->
+<div class="map-credits">
+  <div class="credits-title">Auteurs : Insa SAGNA</div>
+  <div class="credits-mail">
+    <a href="mailto:fanding-insa.SAGNA@etu.univ-amu.fr">
+      fanding-insa.SAGNA@etu.univ-amu.fr
+    </a>
+  </div>
+</div>
+
+<script>
+
+/* Token d'accès Mapbox (clé API personnelle) */
+mapboxgl.accessToken = 'pk.eyJ1IjoiZGFibzIyIiwiYSI6ImNremltNXR2aTMxaG0ydW8xYmcwOGU3YjUifQ.33TjJKovMQpZ1dkC0S9K3Q';
+
+/* Initialisation de la carte Mapbox avec position et inclinaison initiales */
+var map = new mapboxgl.Map({
+  container: 'map',
+  style: 'mapbox://styles/mapbox/satellite-streets-v12',
+  center: [6.22506, 44.08363],
+  zoom: 12,
+  pitch: 50,
+  bearing: 30
+});
+
+/* Objet pour mémoriser l'état de visibilité de chaque couche */
+var layerVisibilityState = {};
+
+/* Active l'affichage dynamique des coordonnées au survol de la carte */
+function enableCoordinates() {
+  map.on('mousemove', function (e) {
+    const coordsElement = document.getElementById('coords');
+    if (!coordsElement) return;
+
+    coordsElement.textContent =
+      'Coordonnées : Longitude: ' + e.lngLat.lng.toFixed(4) +
+      ', Latitude: ' + e.lngLat.lat.toFixed(4);
+  });
+}
+
+/* Fonction principale : ajoute toutes les sources et couches personnalisées */
+function addCustomLayers() {
+
+  /* Ajout du modèle numérique de terrain (MNT) pour le relief 3D */
+  map.addSource('mapbox-dem', {
+    type: 'raster-dem',
+    url: 'mapbox://mapbox.mapbox-terrain-dem-v1',
+    tileSize: 512,
+    maxzoom: 14
+  });
+
+  /* Active le relief 3D sur la carte */
+  map.setTerrain({
+    source: 'mapbox-dem',
+    exaggeration: 1.5
+  });
+
+  /* Source vectorielle : réseaux d'irrigation (canaux) */
+  map.addSource('bleone', {
+    type: 'vector',
+    url: 'mapbox://dabo22.83ztmm3k'
+  });
+
+  /* Couche : canaux colorés selon leur type (primaire/secondaire...) */
+  map.addLayer({
+    id: 'bleone',
+    type: 'line',
+    source: 'bleone',
+    'source-layer': 'canaux_4326-57pv00',
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': [
+        'match',
+        ['get', 'lib_type'],
+        'primaire', '#FF0000',
+        'secondaire', '#FFFF00',
+        'souterrain', '#0000FF',
+        '#808080'
+      ],
+      'line-width': 3,
+      'line-opacity': 0.9
+    }
+  });
+
+  /* Source vectorielle : itinéraires PDIPR */
+  map.addSource('itineraire', {
+    type: 'vector',
+    url: 'mapbox://dabo22.cd4kvjsz'
+  });
+
+  map.addLayer({
+    id: 'itineraire',
+    type: 'line',
+    source: 'itineraire',
+    'source-layer': 'pdipr-7c2ley',
+    layout: { visibility: 'none' },
+    paint: { 'line-color': 'red', 'line-width': 2 }
+  });
+
+  /* Source vectorielle : périmètres ASA */
+  map.addSource('perimetre', {
+    type: 'vector',
+    url: 'mapbox://dabo22.c1xfg5g8'
+  });
+
+  /* Couche : polygones colorés selon le nom de l'ASA */
+  map.addLayer({
+    'id': 'perimetre',
+    'type': 'fill',
+    'source': 'perimetre',
+    'source-layer': 'perimetre_asa_4326-d6053d',
+    'layout': { 'visibility': 'none' },
+    'paint': {
+      'fill-color': [
+        'match',
+        ['get', 'nom'],
+        'ASA du Canal de la Plaine de Gaubert', '#f94144',
+        'ASA du canal de la Grande Iscle', '#f3722c',
+        'ASA Canal du Nigas', '#90be6d',
+        '#577590'
+      ],
+      'fill-opacity': 0.65,
+      'fill-outline-color': '#333333'
+    }
+  });
+
+  /* Source vectorielle : sentiers touristiques */
+  map.addSource('sentier', {
+    type: 'vector',
+    url: 'mapbox://dabo22.99iasv9y'
+  });
+
+  map.addLayer({
+    id: 'sentier',
+    type: 'line',
+    source: 'sentier',
+    'source-layer': 'sentier_touriste-76oftq',
+    layout: { visibility: 'none' },
+    paint: { 'line-color': '#7f3914', 'line-width': 2.5 }
+  });
+
+  /* Source vectorielle : occupation du sol (Registre Parcellaire Graphique) */
+  map.addSource('RPG', {
+    type: 'vector',
+    url: 'mapbox://dabo22.b21llohm'
+  });
+
+  /* Couche : parcelles agricoles colorées selon leur culture */
+  map.addLayer({
+    'id': 'RPG',
+    'type': 'fill',
+    'source': 'RPG',
+    'source-layer': 'RPG_ASAs_4326-9y53t2',
+    'layout': { 'visibility': 'none' },
+    'paint': {
+      'fill-color': [
+        'match',
+        ['get', 'Classeur10'],
+        'ARBORICULTURE', '#FF0000',
+        'CÉRÉALES', '#FFFF00',
+        'MARAICHAGE', '#0000FF',
+        'OLÉAGINEUX', '#00FF00',
+        'PAPAM', '#FF00FF',
+        'PRAIRIES', '#00FFFF',
+        '#808080'
+      ],
+      'fill-opacity': 0.6
+    }
+  });
+
+  /* Source vectorielle : hydrologie (cours d'eau de Mapbox Streets) */
+  map.addSource('mapbox-streets-v8', {
+    type: 'vector',
+    url: 'mapbox://mapbox.mapbox-streets-v8'
+  });
+
+  map.addLayer({
+    id: 'hydrologie',
+    type: 'line',
+    source: 'mapbox-streets-v8',
+    'source-layer': 'waterway',
+    layout: { visibility: 'none' },
+    paint: { 'line-color': '#080f70', 'line-width': 2.5 }
+  });
+
+  /* Couche : bâtiments 3D extrudés */
+  map.addLayer({
+    id: 'Batiments_3D',
+    source: 'mapbox-streets-v8',
+    'source-layer': 'building',
+    filter: ['==', 'extrude', 'true'],
+    type: 'fill-extrusion',
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-extrusion-color': '#555',
+      'fill-extrusion-height': ['get', 'height'],
+      'fill-extrusion-opacity': 0.8
+    }
+  });
+
+  /* Source vectorielle : équipements d'irrigation */
+  map.addSource('eqpmt', {
+    type: 'vector',
+    url: 'mapbox://dabo22.1xnj4tl8',
+    minzoom: 0,
+    maxzoom: 22
+  });
+
+  /* Fonction utilitaire : crée une couche de points pour un type d'équipement donné */
+  function addEquipLayer(id, label) {
+    map.addLayer({
+      id: id,
+      type: 'circle',
+      source: 'eqpmt',
+      'source-layer': 'Equip4326-66b30p',
+      filter: ['==', 'typ_nom', label],
+      layout: { visibility: 'none' },
+      paint: {
+        'circle-radius': [
+          'interpolate', ['linear'], ['zoom'],
+          11, 4,
+          15, 8
+        ],
+        'circle-color': [
+          'match',
+          ['get', 'typ_equip'],
+          'SIPH', '#FF0000',
+          'REGL', '#FFFF00',
+          'PART', '#0000FF',
+          'POMP', '#00FF00',
+          'MART', '#FF00FF',
+          'DEGR', '#00FFFF',
+          'AQUE', '#7A4E4E',
+          '#808080'
+        ],
+        'circle-stroke-color': '#ffffff',
+        'circle-stroke-width': 1.2,
+        'circle-opacity': 0.9
+      }
+    });
+  }
+
+  /* Ajout des différentes couches d'équipements */
+  addEquipLayer('siph', 'Siphon');
+  addEquipLayer('regl', 'Règle');
+  addEquipLayer('part', 'Partiteur');
+  addEquipLayer('pomp', 'Pompe');
+  addEquipLayer('mart', 'Martelière');
+  addEquipLayer('deg', 'Degrillage');
+  addEquipLayer('aq', 'Aqueduc');
+}
+
+/* Fonction pour ajouter les popups sur les équipements */
+function addEquipmentPopups() {
+  /* Liste de tous les identifiants de couches d'équipements */
+  var equipLayers = ['siph', 'regl', 'part', 'pomp', 'mart', 'deg', 'aq'];
+
+  equipLayers.forEach(function(layerId) {
+    /* Change le curseur en pointeur au survol d'un équipement */
+    map.on('mouseenter', layerId, function() {
+      map.getCanvas().style.cursor = 'pointer';
+    });
+
+    /* Restaure le curseur normal quand on quitte l'équipement */
+    map.on('mouseleave', layerId, function() {
+      map.getCanvas().style.cursor = '';
+    });
+
+    /* Affiche un popup au clic sur un équipement */
+    map.on('click', layerId, function(e) {
+      var properties = e.features[0].properties;
+      
+      /* Récupère les informations de l'équipement */
+      var nomEquipement = properties.typ_nom || 'Non spécifié';
+      var typeEquipement = properties.typ_equip || 'Non spécifié';
+      var autresInfos = properties.remarque || 'Aucune remarque';
+
+      /* Crée le contenu HTML du popup */
+      var popupContent = '<div style="font-family: Arial, sans-serif;">' +
+        '<h3 style="margin: 0 0 10px 0; color: #333;">' + nomEquipement + '</h3>' +
+        '<p style="margin: 5px 0;"><strong>Type :</strong> ' + typeEquipement + '</p>' +
+        '<p style="margin: 5px 0;"><strong>Remarques :</strong> ' + autresInfos + '</p>' +
+        '</div>';
+
+      /* Affiche le popup aux coordonnées de l'équipement cliqué */
+      new mapboxgl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML(popupContent)
+        .addTo(map);
+    });
+  });
+}
+
+/* Fonction appelée par les checkboxes : affiche ou masque une couche */
+function switchlayer(lname) {
+  var checkbox = document.getElementById(lname + "CB");
+  if (!checkbox) return;
+
+  var visibility = checkbox.checked ? 'visible' : 'none';
+
+  if (map.getLayer(lname)) {
+    map.setLayoutProperty(lname, 'visibility', visibility);
+  }
+
+  /* Mémorise l'état pour le restaurer après changement de fond de carte */
+  layerVisibilityState[lname] = visibility;
+}
+
+/* Événement déclenché quand la carte est complètement chargée */
+map.on('load', function () {
+
+  /* Ajoute toutes les sources et couches personnalisées */
+  addCustomLayers();
+
+  /* Active l'affichage des coordonnées */
+  enableCoordinates();
+
+  /* Active les popups sur les équipements */
+  addEquipmentPopups();
+
+  /* Synchronise l'état initial des couches avec les checkboxes */
+  document.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.id.endsWith('CB')) {
+      var layerId = cb.id.replace('CB', '');
+      var visibility = cb.checked ? 'visible' : 'none';
+
+      layerVisibilityState[layerId] = visibility;
+
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, 'visibility', visibility);
+      }
+    }
+  });
+});
+
+/* Gestion du changement de fond de carte via le menu déroulant */
+document.getElementById('basemap-select').addEventListener('change', function(e) {
+
+  var newStyle = e.target.value;
+
+  /* Sauvegarde l'état de visibilité actuel de toutes les couches */
+  var visibleLayers = {};
+
+  document.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+    if (cb.id.endsWith('CB')) {
+      var layerId = cb.id.replace('CB', '');
+
+      if (map.getLayer(layerId)) {
+        visibleLayers[layerId] = map.getLayoutProperty(layerId, 'visibility');
+      }
+    }
+  });
+
+  /* Sauvegarde la position et l'orientation de la caméra */
+  var camera = {
+    center: map.getCenter(),
+    zoom: map.getZoom(),
+    pitch: map.getPitch(),
+    bearing: map.getBearing()
+  };
+
+  /* Change le style de fond de carte */
+  map.setStyle(newStyle);
+
+  /* Après rechargement complet du nouveau style */
+  map.once('style.load', function () {
+
+    /* Restaure la position de la caméra */
+    map.jumpTo(camera);
+
+    /* Ré-ajoute toutes les couches personnalisées */
+    addCustomLayers();
+
+    /* Réactive les popups sur les équipements */
+    addEquipmentPopups();
+
+    /* Restaure l'état de visibilité de chaque couche */
+    Object.keys(visibleLayers).forEach(function(layerId) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, 'visibility', visibleLayers[layerId]);
+      }
+    });
+  });
+});
+
+/* Ajout des contrôles de navigation (zoom, rotation) */
+map.addControl(new mapboxgl.NavigationControl(), 'top-left');
+
+/* Ajout de l'échelle métrique */
+map.addControl(new mapboxgl.ScaleControl({ unit: 'metric' }));
+
+/* Ajout du géocodeur (barre de recherche d'adresses) */
+map.addControl(new MapboxGeocoder({
+  accessToken: mapboxgl.accessToken,
+  language: 'fr-FR',
+  mapboxgl: mapboxgl
+}), 'bottom-right');
+
+</script>
+
+<!-- Élément d'affichage des coordonnées GPS du curseur -->
+<div id="coords" class="coords-box">
+  Coordonnées : Longitude: –, Latitude: –
+</div>
+
+</body>
+</html>
